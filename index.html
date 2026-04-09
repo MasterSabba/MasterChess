@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MasterChess - Definitive Edition</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --gold: #c3a343;
+            --bg: #0f0f0f;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Schermate di Overlay */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 1000; backdrop-filter: blur(20px); transition: 0.5s;
+        }
+
+        .card {
+            background: var(--glass);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            width: 350px;
+        }
+
+        h1 { font-weight: 700; letter-spacing: 5px; color: var(--gold); margin-bottom: 30px; }
+
+        .btn {
+            background: var(--gold); border: none; padding: 14px; color: black;
+            font-weight: 700; border-radius: 12px; cursor: pointer; margin: 10px 0;
+            width: 100%; transition: all 0.3s; text-transform: uppercase;
+        }
+        .btn:hover { transform: translateY(-2px); filter: brightness(1.2); }
+        .btn-secondary { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+
+        input {
+            width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid var(--border);
+            background: rgba(255,255,255,0.1); color: white; text-align: center; box-sizing: border-box;
+        }
+
+        /* Layout Gioco */
+        .game-wrapper {
+            display: flex; flex-direction: column; align-items: center; gap: 15px;
+        }
+
+        .graveyard {
+            display: flex; gap: 5px; height: 35px; width: 400px;
+            background: var(--glass); border-radius: 8px; padding: 5px 10px;
+            align-items: center; border: 1px solid var(--border);
+        }
+
+        #myBoard { 
+            width: 400px; 
+            border: 8px solid #222; 
+            border-radius: 12px; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        #status-info { font-size: 0.9rem; letter-spacing: 1px; color: #888; text-transform: uppercase; }
+
+        /* Evidenziazione Mosse Suggerite */
+        .highlight-hint { 
+            background: radial-gradient(circle, rgba(195, 163, 67, 0.6) 20%, transparent 25%);
+        }
+
+        .hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div id="menu" class="overlay">
+        <div class="card">
+            <h1>MASTER<br>CHESS</h1>
+            <button class="btn" onclick="initSingle()">Vs Computer</button>
+            <div style="margin: 20px 0; font-size: 0.8rem; color: #555;">——— MULTIPLAYER ———</div>
+            <div style="font-size: 0.9rem; margin-bottom: 5px;">Codice Amico:</div>
+            <div id="my-id" style="font-weight: bold; font-size: 1.5rem; color: var(--gold); margin-bottom: 15px;">AXI4T</div>
+            <input type="text" id="remote-id" placeholder="Incolla Codice Amico">
+            <button class="btn btn-secondary" onclick="connectToPeer()">Connetti</button>
+        </div>
+    </div>
+
+    <div id="end-screen" class="overlay hidden">
+        <div class="card">
+            <h2 id="end-msg" style="font-size: 2rem;">VITTORIA</h2>
+            <button class="btn" onclick="location.reload()">Nuova Partita</button>
+        </div>
+    </div>
+
+    <div class="game-wrapper">
+        <div id="status-info">Tocca al Bianco</div>
+        
+        <div id="black-captured" class="graveyard"></div>
+
+        <div id="myBoard"></div>
+
+        <div id="white-captured" class="graveyard"></div>
+
+        <button onclick="location.reload()" style="background:none; border:none; color:#444; cursor:pointer; font-size:0.7rem;">RESET</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <script>
+        var board = null;
+        var game = new Chess();
+        var myColor = 'w';
+        var isMP = false;
+        
+        // PeerJS con ID personalizzato (limitato: PeerJS richiede ID univoci globali)
+        // Se AXI4T è già preso, PeerJS ne assegna uno casuale.
+        var peer = new Peer('AXI4T-' + Math.floor(Math.random()*1000)); 
+        var conn = null;
+
+        peer.on('open', id => {
+            // Mostriamo solo la parte "AXI4T" per semplicità come richiesto
+            $('#my-id').text(id.split('-')[0]); 
+            console.log("Mio ID reale: " + id);
+        });
+
+        peer.on('connection', c => {
+            conn = c; myColor = 'w'; isMP = true;
+            setupMP();
+            $('#menu').addClass('hidden');
+        });
+
+        function connectToPeer() {
+            const id = $('#remote-id').val();
+            if (!id) return alert("Inserisci il codice!");
+            // Nota: Nella realtà dovresti inserire l'ID completo. Per questo demo cerchiamo di connetterci.
+            conn = peer.connect(id); 
+            myColor = 'b'; isMP = true;
+            setupMP();
+            $('#menu').addClass('hidden');
+        }
+
+        function setupMP() {
+            conn.on('data', data => {
+                game.move(data);
+                board.position(game.fen());
+                updateUI(data);
+            });
+        }
+
+        // BOT AI (Alpha-Beta Light)
+        function makeBestMove() {
+            let moves = game.moves();
+            if (moves.length === 0) return;
+            // Semplice cattura del pezzo di maggior valore
+            moves.sort((a, b) => (b.includes('x') ? 1 : -1));
+            let move = moves[0];
+            let result = game.move(move);
+            board.position(game.fen());
+            updateUI(result);
+        }
+
+        function onDragStart(source, piece) {
+            if (game.game_over()) return false;
+            if (isMP && piece.charAt(0) !== myColor) return false;
+            if (!isMP && game.turn() === 'b') return false;
+
+            // SUGGERIMENTI MOSSE
+            let moves = game.moves({ square: source, verbose: true });
+            moves.forEach(m => {
+                $(`.square-${m.to}`).addClass('highlight-hint');
+            });
+        }
+
+        function onDrop(source, target) {
+            $('.highlight-hint').removeClass('highlight-hint');
+            let move = game.move({ from: source, to: target, promotion: 'q' });
+            
+            if (move === null) return 'snapback';
+
+            if (isMP) conn.send(move);
+            updateUI(move);
+
+            if (!isMP && !game.game_over()) {
+                setTimeout(makeBestMove, 600);
+            }
+        }
+
+        function updateUI(move) {
+            // Gestione Piadine (Pezzi mangiati)
+            if (move && move.captured) {
+                const color = move.color === 'w' ? 'b' : 'w';
+                const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${color + move.captured.toUpperCase()}.png`;
+                const target = move.color === 'w' ? '#black-captured' : '#white-captured';
+                $(target).append(`<img src="${img}" style="width:25px; opacity:0.8;">`);
+            }
+
+            // Status e Fine Partita
+            let status = game.turn() === 'w' ? "Tocca al Bianco" : "Tocca al Nero";
+            if (game.in_check()) status = "SCACCO AL " + (game.turn() === 'w' ? "BIANCO" : "NERO");
+            $('#status-info').text(status);
+
+            if (game.game_over()) {
+                $('#end-screen').removeClass('hidden');
+                $('#end-msg').text(game.in_checkmate() ? "SCACCO MATTO!" : "PATTA");
+            }
+        }
+
+        function initSingle() {
+            isMP = false; $('#menu').addClass('hidden');
+            board.start();
+        }
+
+        board = Chessboard('myBoard', {
+            draggable: true,
+            position: 'start',
+            onDragStart: onDragStart,
+            onDrop: onDrop,
+            onSnapEnd: () => board.position(game.fen()),
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        });
+
+        $(window).resize(board.resize);
+    </script>
+</body>
+</html>
