@@ -2,124 +2,162 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MasterChess - Definitive Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MasterChess - </title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --gold: #c3a343;
-            --bg: #0f0f0f;
-            --glass: rgba(255, 255, 255, 0.05);
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-deep: #0a0f1e;
+            --bg-slate: #1e293b;
+            --accent: #10b981;
+            --text-light: #f8fafc;
+            --text-dim: #64748b;
+            --board-light: #f1f5f9;
+            --board-dark: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none; /* Impedisce la selezione del testo */
         }
 
         body {
-            font-family: 'Montserrat', sans-serif;
+            font-family: 'Inter', sans-serif;
             margin: 0;
-            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
-            color: white;
+            background: var(--bg-deep);
+            color: var(--text-light);
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-            touch-action: none;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* Blocca lo scroll della pagina */
+            position: fixed; /* Impedisce movimenti su iOS */
         }
 
-        /* Schermate di Overlay */
+        /* Overlay Full-Screen */
         .overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            position: fixed; inset: 0; background: rgba(10, 15, 30, 0.95);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000; backdrop-filter: blur(20px); transition: 0.5s;
+            z-index: 1000; backdrop-filter: blur(8px); transition: 0.3s ease;
         }
 
         .card {
-            background: var(--glass);
-            padding: 40px;
-            border-radius: 24px;
-            border: 1px solid var(--border);
+            background: var(--bg-slate);
+            padding: 30px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             text-align: center;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            width: 350px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            width: 85%;
+            max-width: 340px;
         }
 
-        h1 { font-weight: 700; letter-spacing: 5px; color: var(--gold); margin-bottom: 30px; }
+        h1 { font-weight: 800; font-size: 1.8rem; margin: 0; letter-spacing: -1px; }
+        .version { font-size: 0.6rem; font-weight: 800; color: var(--accent); letter-spacing: 3px; margin-bottom: 25px; }
 
         .btn {
-            background: var(--gold); border: none; padding: 14px; color: black;
-            font-weight: 700; border-radius: 12px; cursor: pointer; margin: 10px 0;
-            width: 100%; transition: all 0.3s; text-transform: uppercase;
+            background: var(--accent);
+            border: none; padding: 15px; color: white;
+            font-weight: 700; border-radius: 14px; cursor: pointer; margin: 8px 0;
+            width: 100%; transition: 0.2s; font-size: 0.9rem;
         }
-        .btn:hover { transform: translateY(-2px); filter: brightness(1.2); }
-        .btn-secondary { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+        .btn:active { transform: scale(0.96); }
+        .btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
 
         input {
-            width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid var(--border);
-            background: rgba(255,255,255,0.1); color: white; text-align: center; box-sizing: border-box;
+            width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid #334155;
+            background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
         }
 
-        /* Layout Gioco */
-        .game-wrapper {
-            display: flex; flex-direction: column; align-items: center; gap: 15px;
-        }
-
-        .graveyard {
-            display: flex; gap: 5px; height: 35px; width: 400px;
-            background: var(--glass); border-radius: 8px; padding: 5px 10px;
-            align-items: center; border: 1px solid var(--border);
+        /* Game Interface */
+        .main-container {
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            height: 100%; width: 100%; padding: 20px 10px;
+            max-width: 450px;
         }
 
         #myBoard { 
-            width: 400px; 
-            border: 8px solid #222; 
+            width: 100%; 
+            border: 4px solid #1e293b; 
             border-radius: 12px; 
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
 
-        #status-info { font-size: 0.9rem; letter-spacing: 1px; color: #888; text-transform: uppercase; }
+        /* Colori Board */
+        .white-1e1d7 { background-color: var(--board-light) !important; }
+        .black-3c85d { background-color: var(--board-dark) !important; }
+        
+        /* Evidenziazione ultima mossa */
+        .highlight-move { box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.7); }
+        .highlight-hint { background: radial-gradient(circle, rgba(16, 185, 129, 0.6) 20%, transparent 25%) !important; }
 
-        /* Evidenziazione Mosse Suggerite */
-        .highlight-hint { 
-            background: radial-gradient(circle, rgba(195, 163, 67, 0.6) 20%, transparent 25%);
+        #status-bar {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 20px; border-radius: 50px;
+            font-size: 0.8rem; font-weight: 700; color: var(--accent);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
-        .hidden { opacity: 0; pointer-events: none; }
+        .graveyard {
+            display: flex; gap: 3px; height: 35px; width: 100%;
+            background: rgba(0,0,0,0.2); border-radius: 8px; padding: 5px;
+            align-items: center; overflow: hidden;
+        }
+
+        .hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
+
+        .stats { display: flex; justify-content: space-around; margin-top: 20px; font-size: 0.7rem; color: var(--text-dim); }
+        .stats b { color: white; font-size: 0.9rem; display: block; }
     </style>
 </head>
 <body>
 
     <div id="menu" class="overlay">
         <div class="card">
-            <h1>MASTER<br>CHESS</h1>
-            <button class="btn" onclick="initSingle()">Vs Computer</button>
-            <div style="margin: 20px 0; font-size: 0.8rem; color: #555;">——— MULTIPLAYER ———</div>
-            <div style="font-size: 0.9rem; margin-bottom: 5px;">Codice Amico:</div>
-            <div id="my-id" style="font-weight: bold; font-size: 1.5rem; color: var(--gold); margin-bottom: 15px;">AXI4T</div>
-            <input type="text" id="remote-id" placeholder="Incolla Codice Amico">
-            <button class="btn btn-secondary" onclick="connectToPeer()">Connetti</button>
+            <h1>MasterChess</h1>
+            <div class="version">PRO_LOCKED</div>
+            
+            <button class="btn" onclick="initSingle()">Giocatore Singolo</button>
+            <div style="margin: 15px 0; font-size: 0.6rem; color: var(--text-dim); font-weight: 800;">MULTIPLAYER P2P</div>
+            
+            <div id="my-id" style="font-weight: 800; font-size: 1.8rem; margin-bottom: 5px;">...</div>
+            <div style="font-size: 0.6rem; color: var(--text-dim); margin-bottom: 10px;">IL TUO ID PARTITA</div>
+            
+            <input type="text" id="remote-id" placeholder="Codice Amico" maxlength="5">
+            <button class="btn btn-outline" onclick="connectToPeer()">Entra in Partita</button>
+
+            <div class="stats">
+                <div>VITTORIE <b id="stat-wins">0</b></div>
+                <div>SCONFITTE <b id="stat-losses">0</b></div>
+            </div>
         </div>
     </div>
 
     <div id="end-screen" class="overlay hidden">
         <div class="card">
-            <h2 id="end-msg" style="font-size: 2rem;">VITTORIA</h2>
-            <button class="btn" onclick="location.reload()">Nuova Partita</button>
+            <h2 id="end-msg">FINE PARTITA</h2>
+            <button class="btn" onclick="location.reload()">MENU PRINCIPALE</button>
         </div>
     </div>
 
-    <div class="game-wrapper">
-        <div id="status-info">Tocca al Bianco</div>
+    <div class="main-container">
+        <div id="status-bar">Inizializzazione...</div>
         
-        <div id="black-captured" class="graveyard"></div>
-
+        <div id="top-captured" class="graveyard"></div>
         <div id="myBoard"></div>
-
-        <div id="white-captured" class="graveyard"></div>
-
-        <button onclick="location.reload()" style="background:none; border:none; color:#444; cursor:pointer; font-size:0.7rem;">RESET</button>
+        <div id="bottom-captured" class="graveyard"></div>
+        
+        <div style="display: flex; gap: 20px;">
+            <button onclick="location.reload()" style="background:none; border:none; color:var(--text-dim); font-weight:700; font-size:0.6rem; letter-spacing:1px;">ABBANDONA</button>
+            <button onclick="toggleFullScreen()" style="background:none; border:none; color:var(--accent); font-weight:700; font-size:0.6rem; letter-spacing:1px;">FULLSCREEN</button>
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -132,32 +170,53 @@
         var game = new Chess();
         var myColor = 'w';
         var isMP = false;
-        
-        // PeerJS con ID personalizzato (limitato: PeerJS richiede ID univoci globali)
-        // Se AXI4T è già preso, PeerJS ne assegna uno casuale.
-        var peer = new Peer('AXI4T-' + Math.floor(Math.random()*1000)); 
         var conn = null;
+        var wakeLock = null;
 
-        peer.on('open', id => {
-            // Mostriamo solo la parte "AXI4T" per semplicità come richiesto
-            $('#my-id').text(id.split('-')[0]); 
-            console.log("Mio ID reale: " + id);
-        });
+        // Statistiche salvate
+        var stats = JSON.parse(localStorage.getItem('mchess_pro_stats')) || { wins: 0, losses: 0 };
+        $('#stat-wins').text(stats.wins);
+        $('#stat-losses').text(stats.losses);
+
+        // Impedisce allo schermo di spegnersi
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) { console.log("WakeLock non supportato o negato."); }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Network Setup
+        var roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+        var peer = new Peer('PRO-' + roomCode);
+
+        peer.on('open', () => { $('#my-id').text(roomCode); });
 
         peer.on('connection', c => {
             conn = c; myColor = 'w'; isMP = true;
             setupMP();
-            $('#menu').addClass('hidden');
+            startGameUI();
         });
 
         function connectToPeer() {
-            const id = $('#remote-id').val();
-            if (!id) return alert("Inserisci il codice!");
-            // Nota: Nella realtà dovresti inserire l'ID completo. Per questo demo cerchiamo di connetterci.
-            conn = peer.connect(id); 
-            myColor = 'b'; isMP = true;
-            setupMP();
-            $('#menu').addClass('hidden');
+            const id = $('#remote-id').val().trim().toUpperCase();
+            if (!id) return;
+            conn = peer.connect('PRO-' + id);
+            conn.on('open', () => {
+                myColor = 'b'; isMP = true;
+                board.orientation('black');
+                setupMP();
+                startGameUI();
+            });
         }
 
         function setupMP() {
@@ -168,16 +227,10 @@
             });
         }
 
-        // BOT AI (Alpha-Beta Light)
-        function makeBestMove() {
-            let moves = game.moves();
-            if (moves.length === 0) return;
-            // Semplice cattura del pezzo di maggior valore
-            moves.sort((a, b) => (b.includes('x') ? 1 : -1));
-            let move = moves[0];
-            let result = game.move(move);
-            board.position(game.fen());
-            updateUI(result);
+        function startGameUI() {
+            $('#menu').addClass('hidden');
+            requestWakeLock();
+            updateUI();
         }
 
         function onDragStart(source, piece) {
@@ -185,9 +238,7 @@
             if (isMP && piece.charAt(0) !== myColor) return false;
             if (!isMP && game.turn() === 'b') return false;
 
-            // SUGGERIMENTI MOSSE
-            let moves = game.moves({ square: source, verbose: true });
-            moves.forEach(m => {
+            game.moves({ square: source, verbose: true }).forEach(m => {
                 $(`.square-${m.to}`).addClass('highlight-hint');
             });
         }
@@ -195,39 +246,52 @@
         function onDrop(source, target) {
             $('.highlight-hint').removeClass('highlight-hint');
             let move = game.move({ from: source, to: target, promotion: 'q' });
-            
             if (move === null) return 'snapback';
-
+            
             if (isMP) conn.send(move);
             updateUI(move);
+            if (!isMP && !game.game_over()) setTimeout(makeBestAIByCapture, 600);
+        }
 
-            if (!isMP && !game.game_over()) {
-                setTimeout(makeBestMove, 600);
-            }
+        function makeBestAIByCapture() {
+            let moves = game.moves();
+            moves.sort((a, b) => b.includes('x') ? 1 : -1);
+            let move = game.move(moves[0]);
+            board.position(game.fen());
+            updateUI(move);
         }
 
         function updateUI(move) {
-            // Gestione Piadine (Pezzi mangiati)
-            if (move && move.captured) {
-                const color = move.color === 'w' ? 'b' : 'w';
-                const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${color + move.captured.toUpperCase()}.png`;
-                const target = move.color === 'w' ? '#black-captured' : '#white-captured';
-                $(target).append(`<img src="${img}" style="width:25px; opacity:0.8;">`);
+            // Rimuovi vecchie evidenziazioni
+            $('#myBoard .square-55d63').removeClass('highlight-move');
+            if (move) {
+                $(`.square-${move.from}`).addClass('highlight-move');
+                $(`.square-${move.to}`).addClass('highlight-move');
+                
+                if (move.captured) {
+                    const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${(move.color === 'w' ? 'b' : 'w') + move.captured.toUpperCase()}.png`;
+                    $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:22px; opacity:0.7;">`);
+                }
             }
 
-            // Status e Fine Partita
-            let status = game.turn() === 'w' ? "Tocca al Bianco" : "Tocca al Nero";
-            if (game.in_check()) status = "SCACCO AL " + (game.turn() === 'w' ? "BIANCO" : "NERO");
-            $('#status-info').text(status);
+            let status = game.turn() === 'w' ? "TURNO: BIANCO" : "TURNO: NERO";
+            if (game.in_check()) status = "!! SCACCO !!";
+            $('#status-bar').text(status);
 
             if (game.game_over()) {
                 $('#end-screen').removeClass('hidden');
-                $('#end-msg').text(game.in_checkmate() ? "SCACCO MATTO!" : "PATTA");
+                let win = (game.turn() !== myColor);
+                if (game.in_checkmate()) {
+                    $('#end-msg').text(win ? "VITTORIA" : "SCONFITTA");
+                    if(win) stats.wins++; else stats.losses++;
+                    localStorage.setItem('mchess_pro_stats', JSON.stringify(stats));
+                } else { $('#end-msg').text("PATTA"); }
             }
         }
 
         function initSingle() {
-            isMP = false; $('#menu').addClass('hidden');
+            isMP = false; 
+            startGameUI();
             board.start();
         }
 
