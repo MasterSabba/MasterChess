@@ -41,6 +41,24 @@
             position: fixed; /* Impedisce movimenti su iOS */
         }
 
+        /* STILE PULSANTE EXIT GRIGIO SCURO INTEGRATO */
+        .exit-button {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 2rem;
+            line-height: 1;
+            color: #333; /* Grigio scuro discreto */
+            text-decoration: none;
+            z-index: 2001;
+            transition: all 0.2s ease;
+            font-family: Arial, sans-serif;
+        }
+        .exit-button:hover {
+            color: var(--text-light); /* Si illumina al passaggio */
+            transform: scale(1.1);
+        }
+
         /* Overlay Full-Screen */
         .overlay {
             position: fixed; inset: 0; background: rgba(10, 15, 30, 0.95);
@@ -115,9 +133,16 @@
 
         .stats { display: flex; justify-content: space-around; margin-top: 20px; font-size: 0.7rem; color: var(--text-dim); }
         .stats b { color: white; font-size: 0.9rem; display: block; }
+
+        /* Gestione spazio X responsive nel menu */
+        @media (max-width: 400px) {
+            #menu .card { margin-top: 20px; }
+        }
     </style>
 </head>
 <body>
+
+    <a href="https://mastersabba.github.io/MasterSabba/" class="exit-button" title="Torna all'Hub">×</a>
 
     <div id="menu" class="overlay">
         <div class="card">
