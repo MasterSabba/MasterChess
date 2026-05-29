@@ -10,6 +10,6 @@ Il gioco include:
 - Evidenziazione mosse e pezzi catturati
 - Supporto fullscreen e wake lock mobile
 
-È collegato alla repository centrale MasterHub (https://mastersabba.github.io/MasterSabba/), piena di altri minigame.
+È collegato alla repository centrale MasterGames (https://mastersabba.github.io/MasterSabba/), piena di altri minigame.
 
 ![Immagine](IMG_9422.jpeg)
