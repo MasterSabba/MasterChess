@@ -1,4 +1,4 @@
-#MasterChess
+# MasterChess
 
 MasterChess è un gioco di scacchi moderno e minimalista giocabile direttamente dal browser. Sfida un amico online tramite codice partita oppure affronta una semplice IA in modalità giocatore singolo.
 
