@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>MasterChess - </title>
+    <title>MasterChess</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
-            user-select: none; /* Impedisce la selezione del testo */
+            user-select: none;
         }
 
         body {
@@ -37,29 +37,28 @@
             justify-content: center;
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* Blocca lo scroll della pagina */
-            position: fixed; /* Impedisce movimenti su iOS */
+            overflow: hidden;
+            position: fixed;
         }
 
-        /* STILE PULSANTE EXIT GRIGIO SCURO INTEGRATO */
+        /* STILE PULSANTE EXIT AGGIORNATO */
         .exit-button {
             position: absolute;
             top: 15px;
             left: 20px;
             font-size: 2rem;
             line-height: 1;
-            color: #333; /* Grigio scuro discreto */
+            color: var(--text-dim);
             text-decoration: none;
             z-index: 2001;
             transition: all 0.2s ease;
             font-family: Arial, sans-serif;
         }
         .exit-button:hover {
-            color: var(--text-light); /* Si illumina al passaggio */
+            color: var(--text-light);
             transform: scale(1.1);
         }
 
-        /* Overlay Full-Screen */
         .overlay {
             position: fixed; inset: 0; background: rgba(10, 15, 30, 0.95);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -94,7 +93,6 @@
             background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
         }
 
-        /* Game Interface */
         .main-container {
             display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             height: 100%; width: 100%; padding: 20px 10px;
@@ -108,11 +106,9 @@
             box-shadow: 0 15px 35px rgba(0,0,0,0.4);
         }
 
-        /* Colori Board */
         .white-1e1d7 { background-color: var(--board-light) !important; }
         .black-3c85d { background-color: var(--board-dark) !important; }
         
-        /* Evidenziazione ultima mossa */
         .highlight-move { box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.7); }
         .highlight-hint { background: radial-gradient(circle, rgba(16, 185, 129, 0.6) 20%, transparent 25%) !important; }
 
@@ -134,7 +130,6 @@
         .stats { display: flex; justify-content: space-around; margin-top: 20px; font-size: 0.7rem; color: var(--text-dim); }
         .stats b { color: white; font-size: 0.9rem; display: block; }
 
-        /* Gestione spazio X responsive nel menu */
         @media (max-width: 400px) {
             #menu .card { margin-top: 20px; }
         }
@@ -180,8 +175,8 @@
         <div id="bottom-captured" class="graveyard"></div>
         
         <div style="display: flex; gap: 20px;">
-            <button onclick="location.reload()" style="background:none; border:none; color:var(--text-dim); font-weight:700; font-size:0.6rem; letter-spacing:1px;">ABBANDONA</button>
-            <button onclick="toggleFullScreen()" style="background:none; border:none; color:var(--accent); font-weight:700; font-size:0.6rem; letter-spacing:1px;">FULLSCREEN</button>
+            <button onclick="location.reload()" style="background:none; border:none; color:var(--text-dim); font-weight:700; font-size:0.6rem; letter-spacing:1px; cursor:pointer;">ABBANDONA</button>
+            <button onclick="toggleFullScreen()" style="background:none; border:none; color:var(--accent); font-weight:700; font-size:0.6rem; letter-spacing:1px; cursor:pointer;">FULLSCREEN</button>
         </div>
     </div>
 
@@ -198,12 +193,10 @@
         var conn = null;
         var wakeLock = null;
 
-        // Statistiche salvate
         var stats = JSON.parse(localStorage.getItem('mchess_pro_stats')) || { wins: 0, losses: 0 };
         $('#stat-wins').text(stats.wins);
         $('#stat-losses').text(stats.losses);
 
-        // Impedisce allo schermo di spegnersi
         async function requestWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
@@ -228,6 +221,9 @@
 
         peer.on('connection', c => {
             conn = c; myColor = 'w'; isMP = true;
+            game.reset();
+            board.orientation('white');
+            board.start();
             setupMP();
             startGameUI();
         });
@@ -238,7 +234,9 @@
             conn = peer.connect('PRO-' + id);
             conn.on('open', () => {
                 myColor = 'b'; isMP = true;
+                game.reset();
                 board.orientation('black');
+                board.start();
                 setupMP();
                 startGameUI();
             });
@@ -246,9 +244,11 @@
 
         function setupMP() {
             conn.on('data', data => {
-                game.move(data);
-                board.position(game.fen());
-                updateUI(data);
+                let move = game.move({ from: data.from, to: data.to, promotion: data.promotion });
+                if (move) {
+                    board.position(game.fen());
+                    updateUI(move);
+                }
             });
         }
 
@@ -273,22 +273,33 @@
             let move = game.move({ from: source, to: target, promotion: 'q' });
             if (move === null) return 'snapback';
             
-            if (isMP) conn.send(move);
+            if (isMP) {
+                conn.send({ from: move.from, to: move.to, promotion: move.promotion });
+            }
             updateUI(move);
             if (!isMP && !game.game_over()) setTimeout(makeBestAIByCapture, 600);
         }
 
         function makeBestAIByCapture() {
-            let moves = game.moves();
-            moves.sort((a, b) => b.includes('x') ? 1 : -1);
-            let move = game.move(moves[0]);
+            let moves = game.moves({ verbose: true });
+            if (moves.length === 0) return;
+
+            // Algoritmo ordinamento catture ottimizzato
+            moves.sort((a, b) => {
+                let aCap = a.captured ? 1 : 0;
+                let bCap = b.captured ? 1 : 0;
+                return bCap - aCap;
+            });
+
+            let aiMove = game.move({ from: moves[0].from, to: moves[0].to, promotion: 'q' });
             board.position(game.fen());
-            updateUI(move);
+            updateUI(aiMove);
         }
 
         function updateUI(move) {
-            // Rimuovi vecchie evidenziazioni
-            $('#myBoard .square-55d63').removeClass('highlight-move');
+            // Selettore classe di pulizia sicuro e slegato da hash interni di libreria
+            $('.highlight-move').removeClass('highlight-move');
+            
             if (move) {
                 $(`.square-${move.from}`).addClass('highlight-move');
                 $(`.square-${move.to}`).addClass('highlight-move');
@@ -316,8 +327,10 @@
 
         function initSingle() {
             isMP = false; 
-            startGameUI();
+            game.reset();
+            board.orientation('white');
             board.start();
+            startGameUI();
         }
 
         board = Chessboard('myBoard', {
