@@ -200,7 +200,20 @@
               measurementId: "G-775DFWZ6PC"
         };
 
+ // --- NUOVO: SALVATAGGIO DEI PUNTI PER L'HUB ---
+    localStorage.setItem("points_masterverbum", myScore);
 
+    document.getElementById('status-text').innerText = `[${myHackerTag}] SYSTEM_ONLINE`;
+    
+    document.querySelectorAll('.rank-bar-fill').forEach(el => { 
+        el.style.width = p + "%"; 
+        el.style.background = c; 
+        el.style.boxShadow = `0 0 10px ${c}`;
+    });
+    document.querySelectorAll('.rank-label').forEach(el => { 
+        el.innerText = `${r} (${myScore}/100)`; 
+        el.style.color = c; 
+    });
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
