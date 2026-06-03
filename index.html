@@ -189,22 +189,16 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-
-
- // --- NUOVO: SALVATAGGIO DEI PUNTI PER L'HUB ---
-    localStorage.setItem("points_masterverbum", myScore);
-
-    document.getElementById('status-text').innerText = `[${myHackerTag}] SYSTEM_ONLINE`;
-    
-    document.querySelectorAll('.rank-bar-fill').forEach(el => { 
-        el.style.width = p + "%"; 
-        el.style.background = c; 
-        el.style.boxShadow = `0 0 10px ${c}`;
-    });
-    document.querySelectorAll('.rank-label').forEach(el => { 
-        el.innerText = `${r} (${myScore}/100)`; 
-        el.style.color = c; 
-    });
+        // Configurazione reale ricavata dalle credenziali della tua Web App
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxZQF5OO5-znaipaPYeFcjOARjFXO1_gc",
+            authDomain: "mastersabba-games.firebaseapp.com",
+            projectId: "mastersabba-games",
+            storageBucket: "mastersabba-games.firebasestorage.app",
+            messagingSenderId: "254141019232",
+            appId: "1:254141019232:web:29702c03b91f8a76677f05",
+            measurementId: "G-775DFWZ6PC"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -224,7 +218,7 @@
                     if (userDoc.exists()) {
                         const data = userDoc.data();
                         
-                        // Sincronizza i punti globali (usa la chiave 'points')
+                        // Sincronizza i punti totali usati dalla classifica globale dell'Hub
                         window.hubScores.globalPoints = data.points || data.totalPoints || 0;
 
                         if (data.scores && data.scores.chess) {
@@ -251,13 +245,15 @@
 
             if (isWin) {
                 window.hubScores.wins++;
-                puntiGuadagnati = 10; // +10 Punti classifica generale
+                puntiGuadagnati = 10; // +10 punti per vittoria
             } else {
                 window.hubScores.losses++;
-                puntiGuadagnati = -5; // -5 Punti classifica generale
+                puntiGuadagnati = -5; // -5 punti per sconfitta
             }
 
             window.hubScores.globalPoints = Math.max(0, window.hubScores.globalPoints + puntiGuadagnati);
+            
+            // Backup locale istantaneo
             localStorage.setItem('mchess_pro_stats', JSON.stringify(window.hubScores));
 
             if (window.currentUserUid) {
@@ -266,7 +262,7 @@
                     const userDoc = await getDoc(userDocRef);
                     let currentData = userDoc.exists() ? userDoc.data() : {};
                     
-                    // Sovrascrive/Aggiorna i punti dell'Hub
+                    // Salva nel campo utilizzato dalla classifica generale dell'Hub
                     currentData.points = window.hubScores.globalPoints; 
                     
                     if (!currentData.scores) currentData.scores = {};
@@ -276,7 +272,7 @@
                     };
 
                     await setDoc(userDocRef, currentData, { merge: true });
-                    console.log(`Classifica aggiornata: Totale ${window.hubScores.globalPoints}`);
+                    console.log(`Classifica aggiornata nel cloud! Punti correnti: ${window.hubScores.globalPoints}`);
                 } catch (e) {
                     console.error("Errore salvataggio classifica cloud:", e);
                 }
