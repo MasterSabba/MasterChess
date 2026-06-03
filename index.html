@@ -72,14 +72,16 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            width: 92%;
+            width: 90%;
             max-width: 360px;
             position: relative;
+            transition: max-width 0.15s ease;
         }
 
-        /* Ingrandita la larghezza massima per dare più respiro ai pezzi */
+        /* MODALITÀ GIOCO GRANDE: Sfrutta il 95% della larghezza su mobile e sale fino a 550px su schermi grandi */
         .container.game-mode {
-            max-width: 460px;
+            width: 95vw !important;
+            max-width: 550px !important;
             padding: 12px;
         }
 
@@ -100,13 +102,12 @@
             background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
         }
 
-        /* Ottimizzata l'altezza minima e la visualizzazione fluida */
+        /* Scacchiera fluida al 100% del suo contenitore espanso */
         #myBoard { 
             width: 100% !important;
             max-width: 100% !important;
-            min-height: 300px;
-            border: 3px solid #0f001d; 
-            border-radius: 8px; 
+            border: 4px solid #0f001d; 
+            border-radius: 10px; 
             margin: 6px 0;
             display: block;
         }
@@ -204,10 +205,12 @@
         
         document.getElementById(id).classList.remove('hidden');
 
+        // Aggressività nel forzare il resize su schermi a comparsa elastica
         if(id === 'p-game' && board) {
             board.resize();
-            setTimeout(() => { board.resize(); }, 50);
-            setTimeout(() => { board.resize(); }, 200);
+            setTimeout(() => { board.resize(); }, 30);
+            setTimeout(() => { board.resize(); }, 100);
+            setTimeout(() => { board.resize(); }, 250);
         }
     }
 
