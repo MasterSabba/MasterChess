@@ -41,7 +41,6 @@
             position: fixed;
         }
 
-        /* STILE PULSANTE EXIT AGGIORNATO */
         .exit-button {
             position: absolute;
             top: 15px;
@@ -142,7 +141,7 @@
     <div id="menu" class="overlay">
         <div class="card">
             <h1>MasterChess</h1>
-            <div class="version">PRO_LOCKED</div>
+            <div class="version" id="user-display">CARICAMENTO AGENTE...</div>
             
             <button class="btn" onclick="initSingle()">Giocatore Singolo</button>
             <div style="margin: 15px 0; font-size: 0.6rem; color: var(--text-dim); font-weight: 800;">MULTIPLAYER P2P</div>
@@ -185,6 +184,97 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIGURAZIONE FIREBASE (Usa la stessa identica del tuo Hub)
+        const firebaseConfig = {
+            apiKey: "AIzaSyA...", 
+            authDomain: "masterhub-...",
+            projectId: "masterhub-...",
+            storageBucket: "masterhub-...",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Stato locale delle statistiche sincronizzate
+        window.currentUserUid = null;
+        window.hubScores = { wins: 0, losses: 0 };
+
+        // Carica i dati all'avvio controllando lo stato della sessione centrale
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                window.currentUserUid = user.uid;
+                const username = user.displayName || "AGENTE";
+                $('#user-display').text(`${username.toUpperCase()}_CONNECTED`);
+
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        // Estrae i punteggi legati a MasterChess se esistono all'interno dell'oggetto scores
+                        if (data.scores && data.scores.chess) {
+                            window.hubScores.wins = data.scores.chess.wins || 0;
+                            window.hubScores.losses = data.scores.chess.losses || 0;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Errore nel recupero dati cloud:", e);
+                    // Fallback su localStorage se il cloud fallisce
+                    const local = JSON.parse(localStorage.getItem('mchess_pro_stats'));
+                    if (local) window.hubScores = local;
+                }
+            } else {
+                $('#user-display').text("GUEST_MODE");
+                const local = JSON.parse(localStorage.getItem('mchess_pro_stats'));
+                if (local) window.hubScores = local;
+            }
+            // Aggiorna la grafica nel menu
+            $('#stat-wins').text(window.hubScores.wins);
+            $('#stat-losses').text(window.hubScores.losses);
+        });
+
+        // Funzione globale per salvare i dati su Cloud + LocalStorage a fine partita
+        window.syncMatchResult = async function(isWin) {
+            if (isWin) window.hubScores.wins++; else window.hubScores.losses++;
+
+            // 1. Salva sempre localmente per sicurezza
+            localStorage.setItem('mchess_pro_stats', JSON.stringify(window.hubScores));
+
+            // 2. Se l'utente è loggato, aggiorna Firestore mantenendo la struttura del tuo Hub
+            if (window.currentUserUid) {
+                try {
+                    const userDocRef = doc(db, "users", window.currentUserUid);
+                    const userDoc = await getDoc(userDocRef);
+                    let currentData = userDoc.exists() ? userDoc.data() : {};
+                    
+                    if (!currentData.scores) currentData.scores = {};
+                    
+                    // Salviamo i punteggi sotto la sotto-chiave dedicata agli scacchi
+                    currentData.scores.chess = {
+                        wins: window.hubScores.wins,
+                        losses: window.hubScores.losses
+                    };
+
+                    await setDoc(userDocRef, currentData, { merge: true });
+                    console.log("Punteggi sincronizzati nel cloud con successo!");
+                } catch (e) {
+                    console.error("Errore durante la sincronizzazione cloud:", e);
+                }
+            }
+            
+            // Aggiorna i testi a schermo
+            $('#stat-wins').text(window.hubScores.wins);
+            $('#stat-losses').text(window.hubScores.losses);
+        };
+    </script>
+
     <script>
         var board = null;
         var game = new Chess();
@@ -192,10 +282,6 @@
         var isMP = false;
         var conn = null;
         var wakeLock = null;
-
-        var stats = JSON.parse(localStorage.getItem('mchess_pro_stats')) || { wins: 0, losses: 0 };
-        $('#stat-wins').text(stats.wins);
-        $('#stat-losses').text(stats.losses);
 
         async function requestWakeLock() {
             try {
@@ -284,7 +370,6 @@
             let moves = game.moves({ verbose: true });
             if (moves.length === 0) return;
 
-            // Algoritmo ordinamento catture ottimizzato
             moves.sort((a, b) => {
                 let aCap = a.captured ? 1 : 0;
                 let bCap = b.captured ? 1 : 0;
@@ -297,7 +382,6 @@
         }
 
         function updateUI(move) {
-            // Selettore classe di pulizia sicuro e slegato da hash interni di libreria
             $('.highlight-move').removeClass('highlight-move');
             
             if (move) {
@@ -319,8 +403,11 @@
                 let win = (game.turn() !== myColor);
                 if (game.in_checkmate()) {
                     $('#end-msg').text(win ? "VITTORIA" : "SCONFITTA");
-                    if(win) stats.wins++; else stats.losses++;
-                    localStorage.setItem('mchess_pro_stats', JSON.stringify(stats));
+                    
+                    // CHIAMATA ALLA SINCRONIZZAZIONE MODULARE FIREBASE
+                    if (typeof window.syncMatchResult === "function") {
+                        window.syncMatchResult(win);
+                    }
                 } else { $('#end-msg').text("PATTA"); }
             }
         }
