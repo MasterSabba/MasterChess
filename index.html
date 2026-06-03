@@ -12,6 +12,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CONFIGURAZIONE FIREBASE (Usa la stessa identica della tua Hub)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAs7...", 
+            authDomain: "mastersabba.firebaseapp.com",
+            projectId: "mastersabba",
+            storageBucket: "mastersabba.appspot.com",
+            messagingSenderId: "565...",
+            appId: "1:565..."
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db; // Lo rendiamo globale per usarlo negli script sotto
+        window.setDoc = setDoc;
+        window.doc = doc;
+        window.getDoc = getDoc;
+    </script>
     
     <style>
         :root {
@@ -57,19 +79,14 @@
             transition: max-width 0.3s ease, padding 0.3s ease;
         }
 
-        /* Quando la partita è attiva espandiamo il contenitore al massimo della leggibilità */
+        /* Espansione dinamica per far diventare la scacchiera gigante */
         .container.game-mode {
-            max-width: 500px;
+            max-width: 95vmin;
             padding: 15px;
         }
 
         h1 { font-weight: 800; font-size: 2.2rem; margin: 0 0 10px 0; letter-spacing: -1px; color: var(--yellow); }
         .hidden { display: none !important; }
-
-        input {
-            width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #334155;
-            background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
-        }
 
         button {
             width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 15px;
@@ -79,6 +96,11 @@
         }
         button:active { transform: translateY(4px); box-shadow: 0 1px 0 #047857; }
         .btn-sec { background: linear-gradient(145deg, #334155, #1e293b); color: var(--text-light); box-shadow: 0 5px 0 #0f172a; }
+
+        input {
+            width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #334155;
+            background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
+        }
 
         #myBoard { 
             width: 100%; 
@@ -127,8 +149,9 @@
 
     <div id="p-home">
         <h1>MASTER CHESS</h1>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Punti Classifica: <span id="pts">0</span></div>
-        <button onclick="initSingle()">GIOCATORE SINGOLO</button>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Giocatore: <span id="lb-nick" style="color:var(--accent)">...</span></div>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
+        <button onclick="initSingle()">GIOCATORE SINGOLO </button>
         <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
     </div>
 
@@ -159,9 +182,11 @@
     var active = false;
     var peer = null;
 
-    // Gestione Punti sincrona stile MasterTris
+    // Recupera Nickname e Punti sincronizzati con la Hub
+    let userNick = localStorage.getItem('tris_nick') || "Player"; 
     let score = parseInt(localStorage.getItem('chess_score')) || 0;
-    localStorage.setItem('points_masterchess', score);
+    
+    document.getElementById('lb-nick').innerText = userNick;
     document.getElementById('pts').innerText = score;
 
     function nav(id) {
@@ -170,7 +195,6 @@
             if(d.id !== 'result-screen') d.classList.add('hidden');
         });
         
-        // Se andiamo in gioco espandiamo la card, altrimenti la teniamo compatta
         if(id === 'p-game') {
             container.classList.add('game-mode');
         } else {
@@ -178,6 +202,28 @@
         }
         
         document.getElementById(id).classList.remove('hidden');
+    }
+
+    // Salva i punti sia localmente che su Cloud Firestore
+    async function savePoints(newScore) {
+        score = newScore;
+        localStorage.setItem('chess_score', score);
+        localStorage.setItem('points_masterchess', score);
+        document.getElementById('pts').innerText = score;
+
+        if (window.db && userNick !== "Player") {
+            try {
+                const userRef = window.doc(window.db, "users", userNick);
+                // Usiamo merge:true per aggiornare solo MasterChess senza cancellare gli altri giochi
+                await window.setDoc(userRef, { 
+                    MasterChess: score,
+                    points_masterchess: score 
+                }, { merge: true });
+                console.log("Punteggio aggiornato globalmente su Firestore!");
+            } catch (e) {
+                console.error("Errore durante il salvataggio Firestore: ", e);
+            }
+        }
     }
 
     function createRoom() {
@@ -297,15 +343,12 @@
                 if (win) {
                     txt.innerText = "👑 VITTORIA";
                     txt.className = "res-win";
-                    score += 10;
+                    savePoints(score + 10);
                 } else {
                     txt.innerText = "SCONFITTA";
                     txt.className = "res-lose";
-                    score = Math.max(0, score - 5);
+                    savePoints(Math.max(0, score - 5));
                 }
-                localStorage.setItem('chess_score', score);
-                localStorage.setItem('points_masterchess', score);
-                document.getElementById('pts').innerText = score;
             } else {
                 txt.innerText = "PATTA";
                 txt.className = "";
