@@ -17,7 +17,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <script>
-        // CONFIGURAZIONE FIREBASE (Inserisci le tue chiavi qui)
+        // CONFIGURAZIONE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyAs7...", 
             authDomain: "mastersabba.firebaseapp.com",
@@ -27,7 +27,6 @@
             appId: "1:565..."
         };
 
-        // Inizializzazione immediata di Firebase e Firestore Compat
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
@@ -76,6 +75,7 @@
             transition: max-width 0.15s ease;
         }
 
+        /* MODALITÀ GIOCO GRANDE: Sfrutta il 95% del display per la massima leggibilità dei pezzi */
         .container.game-mode {
             width: 95vw !important;
             max-width: 550px !important;
@@ -149,7 +149,7 @@
     <div id="p-home">
         <h1>MASTER CHESS</h1>
         <div style="margin-bottom: 15px; opacity: 0.8;">Giocatore: <span id="lb-nick" style="color:var(--accent)">...</span></div>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Punti : <span id="pts">0</span></div>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
         <button onclick="initSingle()">GIOCATORE SINGOLO </button>
         <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
     </div>
@@ -181,9 +181,9 @@
     var active = false;
     var peer = null;
 
-    // Recupero credenziali ed allineamento chiavi con l'Hub principale
-    let userNick = localStorage.getItem('tris_nick') || localStorage.getItem('nickname') || "Player"; 
-    let score = parseInt(localStorage.getItem('chess_score')) || parseInt(localStorage.getItem('points_masterchess')) || 0;
+    // Recupero credenziali centralizzate dall'Hub
+    let userNick = localStorage.getItem('nickname') || localStorage.getItem('username') || "Player"; 
+    let score = parseInt(localStorage.getItem('points_masterchess')) || parseInt(localStorage.getItem('chess_score')) || 0;
     
     document.getElementById('lb-nick').innerText = userNick;
     document.getElementById('pts').innerText = score;
@@ -202,6 +202,7 @@
         
         document.getElementById(id).classList.remove('hidden');
 
+        // Forza ricalcoli a catena per evitare il bug del caricamento asincrono della griglia
         if(id === 'p-game' && board) {
             board.resize();
             setTimeout(() => { board.resize(); }, 30);
@@ -210,22 +211,20 @@
         }
     }
 
-    // Nuova logica sincrona e infallibile di salvataggio Firestore
+    // Salvataggio punti centralizzato e compatibile con merge di Firestore
     async function savePoints(newScore) {
         score = newScore;
-        localStorage.setItem('chess_score', score);
         localStorage.setItem('points_masterchess', score);
+        localStorage.setItem('chess_score', score);
         document.getElementById('pts').innerText = score;
 
         try {
-            // Esegue il merge salvando sia "MasterChess" che "points_masterchess" nel record utente
             await db.collection("users").doc(userNick).set({
-                MasterChess: score,
-                points_masterchess: score
+                MasterChess: score
             }, { merge: true });
-            console.log("Punti salvati con successo su Firestore!");
+            console.log("Punti MasterChess sincronizzati su Firestore per: " + userNick);
         } catch (e) {
-            console.error("Errore critico di salvataggio Firestore: ", e);
+            console.error("Errore di scrittura database: ", e);
         }
     }
 
