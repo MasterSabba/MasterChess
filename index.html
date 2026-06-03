@@ -13,10 +13,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
+    <script>
+        // CONFIGURAZIONE FIREBASE (Inserisci le tue chiavi qui)
         const firebaseConfig = {
             apiKey: "AIzaSyAs7...", 
             authDomain: "mastersabba.firebaseapp.com",
@@ -26,12 +27,9 @@
             appId: "1:565..."
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        window.db = db;
-        window.setDoc = setDoc;
-        window.doc = doc;
-        window.getDoc = getDoc;
+        // Inizializzazione immediata di Firebase e Firestore Compat
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
     </script>
     
     <style>
@@ -78,7 +76,6 @@
             transition: max-width 0.15s ease;
         }
 
-        /* MODALITÀ GIOCO GRANDE: Sfrutta il 95% della larghezza su mobile e sale fino a 550px su schermi grandi */
         .container.game-mode {
             width: 95vw !important;
             max-width: 550px !important;
@@ -102,7 +99,6 @@
             background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
         }
 
-        /* Scacchiera fluida al 100% del suo contenitore espanso */
         #myBoard { 
             width: 100% !important;
             max-width: 100% !important;
@@ -153,8 +149,8 @@
     <div id="p-home">
         <h1>MASTER CHESS</h1>
         <div style="margin-bottom: 15px; opacity: 0.8;">Giocatore: <span id="lb-nick" style="color:var(--accent)">...</span></div>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
-        <button onclick="initSingle()">GIOCATORE SINGOLO</button>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti : <span id="pts">0</span></div>
+        <button onclick="initSingle()">GIOCATORE SINGOLO </button>
         <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
     </div>
 
@@ -185,8 +181,9 @@
     var active = false;
     var peer = null;
 
-    let userNick = localStorage.getItem('tris_nick') || "Player"; 
-    let score = parseInt(localStorage.getItem('chess_score')) || 0;
+    // Recupero credenziali ed allineamento chiavi con l'Hub principale
+    let userNick = localStorage.getItem('tris_nick') || localStorage.getItem('nickname') || "Player"; 
+    let score = parseInt(localStorage.getItem('chess_score')) || parseInt(localStorage.getItem('points_masterchess')) || 0;
     
     document.getElementById('lb-nick').innerText = userNick;
     document.getElementById('pts').innerText = score;
@@ -205,7 +202,6 @@
         
         document.getElementById(id).classList.remove('hidden');
 
-        // Aggressività nel forzare il resize su schermi a comparsa elastica
         if(id === 'p-game' && board) {
             board.resize();
             setTimeout(() => { board.resize(); }, 30);
@@ -214,23 +210,22 @@
         }
     }
 
+    // Nuova logica sincrona e infallibile di salvataggio Firestore
     async function savePoints(newScore) {
         score = newScore;
         localStorage.setItem('chess_score', score);
         localStorage.setItem('points_masterchess', score);
         document.getElementById('pts').innerText = score;
 
-        if (window.db && userNick !== "Player") {
-            try {
-                const userRef = window.doc(window.db, "users", userNick);
-                await window.setDoc(userRef, { 
-                    MasterChess: score,
-                    points_masterchess: score 
-                }, { merge: true });
-                console.log("Punteggio aggiornato globalmente su Firestore!");
-            } catch (e) {
-                console.error("Errore durante il salvataggio Firestore: ", e);
-            }
+        try {
+            // Esegue il merge salvando sia "MasterChess" che "points_masterchess" nel record utente
+            await db.collection("users").doc(userNick).set({
+                MasterChess: score,
+                points_masterchess: score
+            }, { merge: true });
+            console.log("Punti salvati con successo su Firestore!");
+        } catch (e) {
+            console.error("Errore critico di salvataggio Firestore: ", e);
         }
     }
 
