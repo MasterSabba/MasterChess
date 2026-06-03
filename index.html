@@ -189,7 +189,7 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURAZIONE FIREBASE (Usa la stessa identica del tuo Hub)
+        // CONFIGURAZIONE FIREBASE (Incolla qui le credenziali corrette del tuo progetto)
         const firebaseConfig = {
             apiKey: "AIzaSyA...", 
             authDomain: "masterhub-...",
@@ -203,11 +203,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Stato locale delle statistiche sincronizzate
         window.currentUserUid = null;
-        window.hubScores = { wins: 0, losses: 0 };
+        window.hubScores = { wins: 0, losses: 0, globalPoints: 0 };
 
-        // Carica i dati all'avvio controllando lo stato della sessione centrale
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 window.currentUserUid = user.uid;
@@ -218,7 +216,10 @@
                     const userDoc = await getDoc(doc(db, "users", user.uid));
                     if (userDoc.exists()) {
                         const data = userDoc.data();
-                        // Estrae i punteggi legati a MasterChess se esistono all'interno dell'oggetto scores
+                        
+                        // Sincronizza i punti globali (usa la chiave 'points')
+                        window.hubScores.globalPoints = data.points || data.totalPoints || 0;
+
                         if (data.scores && data.scores.chess) {
                             window.hubScores.wins = data.scores.chess.wins || 0;
                             window.hubScores.losses = data.scores.chess.losses || 0;
@@ -226,7 +227,6 @@
                     }
                 } catch (e) {
                     console.error("Errore nel recupero dati cloud:", e);
-                    // Fallback su localStorage se il cloud fallisce
                     const local = JSON.parse(localStorage.getItem('mchess_pro_stats'));
                     if (local) window.hubScores = local;
                 }
@@ -235,41 +235,46 @@
                 const local = JSON.parse(localStorage.getItem('mchess_pro_stats'));
                 if (local) window.hubScores = local;
             }
-            // Aggiorna la grafica nel menu
             $('#stat-wins').text(window.hubScores.wins);
             $('#stat-losses').text(window.hubScores.losses);
         });
 
-        // Funzione globale per salvare i dati su Cloud + LocalStorage a fine partita
         window.syncMatchResult = async function(isWin) {
-            if (isWin) window.hubScores.wins++; else window.hubScores.losses++;
+            let puntiGuadagnati = 0;
 
-            // 1. Salva sempre localmente per sicurezza
+            if (isWin) {
+                window.hubScores.wins++;
+                puntiGuadagnati = 10; // +10 Punti classifica generale
+            } else {
+                window.hubScores.losses++;
+                puntiGuadagnati = -5; // -5 Punti classifica generale
+            }
+
+            window.hubScores.globalPoints = Math.max(0, window.hubScores.globalPoints + puntiGuadagnati);
             localStorage.setItem('mchess_pro_stats', JSON.stringify(window.hubScores));
 
-            // 2. Se l'utente è loggato, aggiorna Firestore mantenendo la struttura del tuo Hub
             if (window.currentUserUid) {
                 try {
                     const userDocRef = doc(db, "users", window.currentUserUid);
                     const userDoc = await getDoc(userDocRef);
                     let currentData = userDoc.exists() ? userDoc.data() : {};
                     
-                    if (!currentData.scores) currentData.scores = {};
+                    // Sovrascrive/Aggiorna i punti dell'Hub
+                    currentData.points = window.hubScores.globalPoints; 
                     
-                    // Salviamo i punteggi sotto la sotto-chiave dedicata agli scacchi
+                    if (!currentData.scores) currentData.scores = {};
                     currentData.scores.chess = {
                         wins: window.hubScores.wins,
                         losses: window.hubScores.losses
                     };
 
                     await setDoc(userDocRef, currentData, { merge: true });
-                    console.log("Punteggi sincronizzati nel cloud con successo!");
+                    console.log(`Classifica aggiornata: Totale ${window.hubScores.globalPoints}`);
                 } catch (e) {
-                    console.error("Errore durante la sincronizzazione cloud:", e);
+                    console.error("Errore salvataggio classifica cloud:", e);
                 }
             }
             
-            // Aggiorna i testi a schermo
             $('#stat-wins').text(window.hubScores.wins);
             $('#stat-losses').text(window.hubScores.losses);
         };
@@ -288,7 +293,7 @@
                 if ('wakeLock' in navigator) {
                     wakeLock = await navigator.wakeLock.request('screen');
                 }
-            } catch (err) { console.log("WakeLock non supportato o negato."); }
+            } catch (err) { console.log("WakeLock non supportato."); }
         }
 
         function toggleFullScreen() {
@@ -299,7 +304,6 @@
             }
         }
 
-        // Network Setup
         var roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
         var peer = new Peer('PRO-' + roomCode);
 
@@ -404,7 +408,6 @@
                 if (game.in_checkmate()) {
                     $('#end-msg').text(win ? "VITTORIA" : "SCONFITTA");
                     
-                    // CHIAMATA ALLA SINCRONIZZAZIONE MODULARE FIREBASE
                     if (typeof window.syncMatchResult === "function") {
                         window.syncMatchResult(win);
                     }
