@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+    <a href="https://mastersabba.github.io/MasterSabba/" target="_self" style="position: fixed; top: 10px; left: 10px; z-index: 9999; text-decoration: none; color: rgba(255, 255, 255, 0.2); font-family: sans-serif; font-size: 24px; padding: 10px; transition: color 0.3s ease;">✕</a>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MasterChess</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     
     <style>
         :root {
@@ -19,6 +22,7 @@
             --text-dim: #64748b;
             --board-light: #f1f5f9;
             --board-dark: #64748b;
+            --yellow: #ffeb3b;
         }
 
         * {
@@ -35,283 +39,155 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             width: 100vw;
             overflow: hidden;
-            position: fixed;
         }
 
-        .exit-button {
-            position: absolute;
-            top: 15px;
-            left: 20px;
-            font-size: 2rem;
-            line-height: 1;
-            color: var(--text-dim);
-            text-decoration: none;
-            z-index: 2001;
-            transition: all 0.2s ease;
-            font-family: Arial, sans-serif;
-        }
-        .exit-button:hover {
-            color: var(--text-light);
-            transform: scale(1.1);
-        }
-
-        .overlay {
-            position: fixed; inset: 0; background: rgba(10, 15, 30, 0.95);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 1000; backdrop-filter: blur(8px); transition: 0.3s ease;
-        }
-
-        .card {
+        .container {
             background: var(--bg-slate);
             padding: 30px;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
             text-align: center;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-            width: 85%;
-            max-width: 340px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            transition: max-width 0.3s ease, padding 0.3s ease;
         }
 
-        h1 { font-weight: 800; font-size: 1.8rem; margin: 0; letter-spacing: -1px; }
-        .version { font-size: 0.6rem; font-weight: 800; color: var(--accent); letter-spacing: 3px; margin-bottom: 25px; }
-
-        .btn {
-            background: var(--accent);
-            border: none; padding: 15px; color: white;
-            font-weight: 700; border-radius: 14px; cursor: pointer; margin: 8px 0;
-            width: 100%; transition: 0.2s; font-size: 0.9rem;
+        /* Quando la partita è attiva espandiamo il contenitore al massimo della leggibilità */
+        .container.game-mode {
+            max-width: 500px;
+            padding: 15px;
         }
-        .btn:active { transform: scale(0.96); }
-        .btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+
+        h1 { font-weight: 800; font-size: 2.2rem; margin: 0 0 10px 0; letter-spacing: -1px; color: var(--yellow); }
+        .hidden { display: none !important; }
 
         input {
-            width: 100%; padding: 12px; margin: 15px 0; border-radius: 10px; border: 1px solid #334155;
+            width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #334155;
             background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
         }
 
-        .main-container {
-            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
-            height: 100%; width: 100%; padding: 20px 10px;
-            max-width: 450px;
+        button {
+            width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 15px;
+            font-weight: bold; cursor: pointer; font-size: 1rem; text-transform: uppercase;
+            background: linear-gradient(145deg, #10b981, #059669); color: white;
+            box-shadow: 0 5px 0 #047857, 0 8px 15px rgba(0,0,0,0.4); transition: 0.1s;
         }
+        button:active { transform: translateY(4px); box-shadow: 0 1px 0 #047857; }
+        .btn-sec { background: linear-gradient(145deg, #334155, #1e293b); color: var(--text-light); box-shadow: 0 5px 0 #0f172a; }
 
         #myBoard { 
             width: 100%; 
-            border: 4px solid #1e293b; 
+            border: 4px solid #0f001d; 
             border-radius: 12px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            margin: 10px 0;
         }
 
         .white-1e1d7 { background-color: var(--board-light) !important; }
         .black-3c85d { background-color: var(--board-dark) !important; }
-        
         .highlight-move { box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.7); }
         .highlight-hint { background: radial-gradient(circle, rgba(16, 185, 129, 0.6) 20%, transparent 25%) !important; }
 
         #status-bar {
             background: rgba(255,255,255,0.05);
             padding: 8px 20px; border-radius: 50px;
-            font-size: 0.8rem; font-weight: 700; color: var(--accent);
-            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.8rem; font-weight: 700; color: var(--yellow);
+            border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;
         }
 
         .graveyard {
             display: flex; gap: 3px; height: 35px; width: 100%;
             background: rgba(0,0,0,0.2); border-radius: 8px; padding: 5px;
-            align-items: center; overflow: hidden;
+            align-items: center; overflow: hidden; margin: 5px 0;
         }
 
-        .hidden { opacity: 0; pointer-events: none; transform: scale(0.95); }
-
-        .stats { display: flex; justify-content: space-around; margin-top: 20px; font-size: 0.7rem; color: var(--text-dim); }
-        .stats b { color: white; font-size: 0.9rem; display: block; }
-
-        @media (max-width: 400px) {
-            #menu .card { margin-top: 20px; }
+        #result-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 15, 30, 0.95); border-radius: 25px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
         }
+        #res-txt { font-size: 2rem; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; }
+        .res-win { color: var(--accent); text-shadow: 0 0 20px var(--accent); }
+        .res-lose { color: #ff3131; text-shadow: 0 0 20px #ff3131; }
+
+        #code-box { background: #000; color: var(--accent); padding: 15px; border-radius: 10px; font-family: monospace; border: 1px dashed var(--accent); margin: 10px 0; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <a href="https://mastersabba.github.io/MasterSabba/" class="exit-button" title="Torna all'Hub">×</a>
-
-    <div id="menu" class="overlay">
-        <div class="card">
-            <h1>MasterChess</h1>
-            <div class="version" id="user-display">CARICAMENTO AGENTE...</div>
-            
-            <button class="btn" onclick="initSingle()">Giocatore Singolo</button>
-            <div style="margin: 15px 0; font-size: 0.6rem; color: var(--text-dim); font-weight: 800;">MULTIPLAYER P2P</div>
-            
-            <div id="my-id" style="font-weight: 800; font-size: 1.8rem; margin-bottom: 5px;">...</div>
-            <div style="font-size: 0.6rem; color: var(--text-dim); margin-bottom: 10px;">IL TUO ID PARTITA</div>
-            
-            <input type="text" id="remote-id" placeholder="Codice Amico" maxlength="5">
-            <button class="btn btn-outline" onclick="connectToPeer()">Entra in Partita</button>
-
-            <div class="stats">
-                <div>VITTORIE <b id="stat-wins">0</b></div>
-                <div>SCONFITTE <b id="stat-losses">0</b></div>
-            </div>
-        </div>
+<div class="container" id="main-container">
+    <div id="result-screen" class="hidden">
+        <h2 id="res-txt">VITTORIA</h2>
+        <button onclick="location.reload()" style="width: 80%">MENU PRINCIPALE</button>
     </div>
 
-    <div id="end-screen" class="overlay hidden">
-        <div class="card">
-            <h2 id="end-msg">FINE PARTITA</h2>
-            <button class="btn" onclick="location.reload()">MENU PRINCIPALE</button>
-        </div>
+    <div id="p-home">
+        <h1>MASTER CHESS</h1>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti Classifica: <span id="pts">0</span></div>
+        <button onclick="initSingle()">GIOCATORE SINGOLO</button>
+        <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
     </div>
 
-    <div class="main-container">
+    <div id="p-friends" class="hidden">
+        <h1>ONLINE P2P</h1>
+        <button onclick="createRoom()">CREA PARTITA (ID)</button>
+        <div id="code-box" class="hidden">...</div>
+        <input type="text" id="remote-id" placeholder="Incolla Codice Amico" maxlength="5">
+        <button onclick="connectToPeer()">ENTRA IN PARTITA</button>
+        <button class="btn-sec" onclick="nav('p-home')">INDIETRO</button>
+    </div>
+
+    <div id="p-game" class="hidden">
         <div id="status-bar">Inizializzazione...</div>
-        
         <div id="top-captured" class="graveyard"></div>
         <div id="myBoard"></div>
         <div id="bottom-captured" class="graveyard"></div>
-        
-        <div style="display: flex; gap: 20px;">
-            <button onclick="location.reload()" style="background:none; border:none; color:var(--text-dim); font-weight:700; font-size:0.6rem; letter-spacing:1px; cursor:pointer;">ABBANDONA</button>
-            <button onclick="toggleFullScreen()" style="background:none; border:none; color:var(--accent); font-weight:700; font-size:0.6rem; letter-spacing:1px; cursor:pointer;">FULLSCREEN</button>
-        </div>
+        <button class="btn-sec" onclick="location.reload()">ABBANDONA</button>
     </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+    var board = null;
+    var game = new Chess();
+    var myColor = 'w';
+    var isMP = false;
+    var conn = null;
+    var active = false;
+    var peer = null;
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // Gestione Punti sincrona stile MasterTris
+    let score = parseInt(localStorage.getItem('chess_score')) || 0;
+    localStorage.setItem('points_masterchess', score);
+    document.getElementById('pts').innerText = score;
 
-        // Configurazione reale ricavata dalle credenziali della tua Web App
-        const firebaseConfig = {
-            apiKey: "AIzaSyBxZQF5OO5-znaipaPYeFcjOARjFXO1_gc",
-            authDomain: "mastersabba-games.firebaseapp.com",
-            projectId: "mastersabba-games",
-            storageBucket: "mastersabba-games.firebasestorage.app",
-            messagingSenderId: "254141019232",
-            appId: "1:254141019232:web:29702c03b91f8a76677f05",
-            measurementId: "G-775DFWZ6PC"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        window.currentUserUid = null;
-        window.hubScores = { wins: 0, losses: 0, globalPoints: 0 };
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                window.currentUserUid = user.uid;
-                const username = user.displayName || "AGENTE";
-                $('#user-display').text(`${username.toUpperCase()}_CONNECTED`);
-
-                try {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        
-                        // Sincronizza i punti totali usati dalla classifica globale dell'Hub
-                        window.hubScores.globalPoints = data.points || data.totalPoints || 0;
-
-                        if (data.scores && data.scores.chess) {
-                            window.hubScores.wins = data.scores.chess.wins || 0;
-                            window.hubScores.losses = data.scores.chess.losses || 0;
-                        }
-                    }
-                } catch (e) {
-                    console.error("Errore nel recupero dati cloud:", e);
-                    const local = JSON.parse(localStorage.getItem('mchess_pro_stats'));
-                    if (local) window.hubScores = local;
-                }
-            } else {
-                $('#user-display').text("GUEST_MODE");
-                const local = JSON.parse(localStorage.getItem('mchess_pro_stats'));
-                if (local) window.hubScores = local;
-            }
-            $('#stat-wins').text(window.hubScores.wins);
-            $('#stat-losses').text(window.hubScores.losses);
+    function nav(id) {
+        const container = document.getElementById('main-container');
+        document.querySelectorAll('.container > div').forEach(d => {
+            if(d.id !== 'result-screen') d.classList.add('hidden');
         });
-
-        window.syncMatchResult = async function(isWin) {
-            let puntiGuadagnati = 0;
-
-            if (isWin) {
-                window.hubScores.wins++;
-                puntiGuadagnati = 10; // +10 punti per vittoria
-            } else {
-                window.hubScores.losses++;
-                puntiGuadagnati = -5; // -5 punti per sconfitta
-            }
-
-            window.hubScores.globalPoints = Math.max(0, window.hubScores.globalPoints + puntiGuadagnati);
-            
-            // Backup locale istantaneo
-            localStorage.setItem('mchess_pro_stats', JSON.stringify(window.hubScores));
-
-            if (window.currentUserUid) {
-                try {
-                    const userDocRef = doc(db, "users", window.currentUserUid);
-                    const userDoc = await getDoc(userDocRef);
-                    let currentData = userDoc.exists() ? userDoc.data() : {};
-                    
-                    // Salva nel campo utilizzato dalla classifica generale dell'Hub
-                    currentData.points = window.hubScores.globalPoints; 
-                    
-                    if (!currentData.scores) currentData.scores = {};
-                    currentData.scores.chess = {
-                        wins: window.hubScores.wins,
-                        losses: window.hubScores.losses
-                    };
-
-                    await setDoc(userDocRef, currentData, { merge: true });
-                    console.log(`Classifica aggiornata nel cloud! Punti correnti: ${window.hubScores.globalPoints}`);
-                } catch (e) {
-                    console.error("Errore salvataggio classifica cloud:", e);
-                }
-            }
-            
-            $('#stat-wins').text(window.hubScores.wins);
-            $('#stat-losses').text(window.hubScores.losses);
-        };
-    </script>
-
-    <script>
-        var board = null;
-        var game = new Chess();
-        var myColor = 'w';
-        var isMP = false;
-        var conn = null;
-        var wakeLock = null;
-
-        async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) { console.log("WakeLock non supportato."); }
+        
+        // Se andiamo in gioco espandiamo la card, altrimenti la teniamo compatta
+        if(id === 'p-game') {
+            container.classList.add('game-mode');
+        } else {
+            container.classList.remove('game-mode');
         }
+        
+        document.getElementById(id).classList.remove('hidden');
+    }
 
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        var roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-        var peer = new Peer('PRO-' + roomCode);
-
-        peer.on('open', () => { $('#my-id').text(roomCode); });
-
+    function createRoom() {
+        const id = Math.random().toString(36).substring(2, 7).toUpperCase();
+        peer = new Peer('CHESS-' + id);
+        peer.on('open', () => {
+            const box = document.getElementById('code-box');
+            box.innerText = "CODICE: " + id;
+            box.classList.remove('hidden');
+        });
         peer.on('connection', c => {
             conn = c; myColor = 'w'; isMP = true;
             game.reset();
@@ -320,11 +196,14 @@
             setupMP();
             startGameUI();
         });
+    }
 
-        function connectToPeer() {
-            const id = $('#remote-id').val().trim().toUpperCase();
-            if (!id) return;
-            conn = peer.connect('PRO-' + id);
+    function connectToPeer() {
+        const id = document.getElementById('remote-id').value.trim().toUpperCase();
+        if (!id) return;
+        peer = new Peer();
+        peer.on('open', () => {
+            conn = peer.connect('CHESS-' + id);
             conn.on('open', () => {
                 myColor = 'b'; isMP = true;
                 game.reset();
@@ -333,109 +212,127 @@
                 setupMP();
                 startGameUI();
             });
-        }
+        });
+    }
 
-        function setupMP() {
-            conn.on('data', data => {
-                let move = game.move({ from: data.from, to: data.to, promotion: data.promotion });
-                if (move) {
-                    board.position(game.fen());
-                    updateUI(move);
-                }
-            });
-        }
-
-        function startGameUI() {
-            $('#menu').addClass('hidden');
-            requestWakeLock();
-            updateUI();
-        }
-
-        function onDragStart(source, piece) {
-            if (game.game_over()) return false;
-            if (isMP && piece.charAt(0) !== myColor) return false;
-            if (!isMP && game.turn() === 'b') return false;
-
-            game.moves({ square: source, verbose: true }).forEach(m => {
-                $(`.square-${m.to}`).addClass('highlight-hint');
-            });
-        }
-
-        function onDrop(source, target) {
-            $('.highlight-hint').removeClass('highlight-hint');
-            let move = game.move({ from: source, to: target, promotion: 'q' });
-            if (move === null) return 'snapback';
-            
-            if (isMP) {
-                conn.send({ from: move.from, to: move.to, promotion: move.promotion });
-            }
-            updateUI(move);
-            if (!isMP && !game.game_over()) setTimeout(makeBestAIByCapture, 600);
-        }
-
-        function makeBestAIByCapture() {
-            let moves = game.moves({ verbose: true });
-            if (moves.length === 0) return;
-
-            moves.sort((a, b) => {
-                let aCap = a.captured ? 1 : 0;
-                let bCap = b.captured ? 1 : 0;
-                return bCap - aCap;
-            });
-
-            let aiMove = game.move({ from: moves[0].from, to: moves[0].to, promotion: 'q' });
-            board.position(game.fen());
-            updateUI(aiMove);
-        }
-
-        function updateUI(move) {
-            $('.highlight-move').removeClass('highlight-move');
-            
+    function setupMP() {
+        conn.on('data', data => {
+            let move = game.move({ from: data.from, to: data.to, promotion: data.promotion });
             if (move) {
-                $(`.square-${move.from}`).addClass('highlight-move');
-                $(`.square-${move.to}`).addClass('highlight-move');
-                
-                if (move.captured) {
-                    const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${(move.color === 'w' ? 'b' : 'w') + move.captured.toUpperCase()}.png`;
-                    $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:22px; opacity:0.7;">`);
-                }
+                board.position(game.fen());
+                updateUI(move);
             }
+        });
+    }
 
-            let status = game.turn() === 'w' ? "TURNO: BIANCO" : "TURNO: NERO";
-            if (game.in_check()) status = "!! SCACCO !!";
-            $('#status-bar').text(status);
+    function startGameUI() {
+        nav('p-game');
+        active = true;
+        updateUI();
+        setTimeout(() => { board.resize(); }, 200);
+    }
 
-            if (game.game_over()) {
-                $('#end-screen').removeClass('hidden');
-                let win = (game.turn() !== myColor);
-                if (game.in_checkmate()) {
-                    $('#end-msg').text(win ? "VITTORIA" : "SCONFITTA");
-                    
-                    if (typeof window.syncMatchResult === "function") {
-                        window.syncMatchResult(win);
-                    }
-                } else { $('#end-msg').text("PATTA"); }
-            }
+    function onDragStart(source, piece) {
+        if (game.game_over() || !active) return false;
+        if (isMP && piece.charAt(0) !== myColor) return false;
+        if (!isMP && game.turn() === 'b') return false;
+
+        game.moves({ square: source, verbose: true }).forEach(m => {
+            $(`.square-${m.to}`).addClass('highlight-hint');
+        });
+    }
+
+    function onDrop(source, target) {
+        $('.highlight-hint').removeClass('highlight-hint');
+        let move = game.move({ from: source, to: target, promotion: 'q' });
+        if (move === null) return 'snapback';
+        
+        if (isMP) {
+            conn.send({ from: move.from, to: move.to, promotion: move.promotion });
         }
+        updateUI(move);
+        if (!isMP && !game.game_over()) setTimeout(makeBestAIByCapture, 600);
+    }
 
-        function initSingle() {
-            isMP = false; 
-            game.reset();
-            board.orientation('white');
-            board.start();
-            startGameUI();
-        }
+    function makeBestAIByCapture() {
+        let moves = game.moves({ verbose: true });
+        if (moves.length === 0) return;
 
-        board = Chessboard('myBoard', {
-            draggable: true,
-            position: 'start',
-            onDragStart: onDragStart,
-            onDrop: onDrop,
-            onSnapEnd: () => board.position(game.fen()),
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+        moves.sort((a, b) => {
+            let aCap = a.captured ? 1 : 0;
+            let bCap = b.captured ? 1 : 0;
+            return bCap - aCap;
         });
 
-        $(window).resize(board.resize);
-    </script>
+        let aiMove = game.move({ from: moves[0].from, to: moves[0].to, promotion: 'q' });
+        board.position(game.fen());
+        updateUI(aiMove);
+    }
+
+    function updateUI(move) {
+        $('.highlight-move').removeClass('highlight-move');
+        
+        if (move) {
+            $(`.square-${move.from}`).addClass('highlight-move');
+            $(`.square-${move.to}`).addClass('highlight-move');
+            
+            if (move.captured) {
+                const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${(move.color === 'w' ? 'b' : 'w') + move.captured.toUpperCase()}.png`;
+                $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:20px; opacity:0.7;">`);
+            }
+        }
+
+        let status = game.turn() === 'w' ? "TURNO: BIANCO" : "TURNO: NERO";
+        if (game.in_check()) status = "⚠️ SCACCO!";
+        document.getElementById('status-bar').innerText = status;
+
+        if (game.game_over()) {
+            active = false;
+            const res = document.getElementById('result-screen');
+            const txt = document.getElementById('res-txt');
+            res.classList.remove('hidden');
+
+            if (game.in_checkmate()) {
+                let win = (game.turn() !== myColor);
+                if (win) {
+                    txt.innerText = "👑 VITTORIA";
+                    txt.className = "res-win";
+                    score += 10;
+                } else {
+                    txt.innerText = "SCONFITTA";
+                    txt.className = "res-lose";
+                    score = Math.max(0, score - 5);
+                }
+                localStorage.setItem('chess_score', score);
+                localStorage.setItem('points_masterchess', score);
+                document.getElementById('pts').innerText = score;
+            } else {
+                txt.innerText = "PATTA";
+                txt.className = "";
+            }
+        }
+    }
+
+    function initSingle() {
+        isMP = false; 
+        game.reset();
+        board.orientation('white');
+        board.start();
+        document.getElementById('top-captured').innerHTML = "";
+        document.getElementById('bottom-captured').innerHTML = "";
+        startGameUI();
+    }
+
+    board = Chessboard('myBoard', {
+        draggable: true,
+        position: 'start',
+        onDragStart: onDragStart,
+        onDrop: onDrop,
+        onSnapEnd: () => board.position(game.fen()),
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    });
+
+    $(window).resize(board.resize);
+</script>
 </body>
 </html>
