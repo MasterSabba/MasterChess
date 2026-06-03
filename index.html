@@ -17,7 +17,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // CONFIGURAZIONE FIREBASE (Usa la stessa identica della tua Hub)
         const firebaseConfig = {
             apiKey: "AIzaSyAs7...", 
             authDomain: "mastersabba.firebaseapp.com",
@@ -29,7 +28,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        window.db = db; // Lo rendiamo globale per usarlo negli script sotto
+        window.db = db;
         window.setDoc = setDoc;
         window.doc = doc;
         window.getDoc = getDoc;
@@ -68,28 +67,27 @@
 
         .container {
             background: var(--bg-slate);
-            padding: 30px;
+            padding: 25px;
             border-radius: 25px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            width: 90%;
-            max-width: 400px;
+            width: 92%;
+            max-width: 360px;
             position: relative;
-            transition: max-width 0.3s ease, padding 0.3s ease;
         }
 
-        /* Espansione dinamica per far diventare la scacchiera gigante */
+        /* Ingrandita la larghezza massima per dare più respiro ai pezzi */
         .container.game-mode {
-            max-width: 95vmin;
-            padding: 15px;
+            max-width: 460px;
+            padding: 12px;
         }
 
         h1 { font-weight: 800; font-size: 2.2rem; margin: 0 0 10px 0; letter-spacing: -1px; color: var(--yellow); }
         .hidden { display: none !important; }
 
         button {
-            width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 15px;
+            width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 15px;
             font-weight: bold; cursor: pointer; font-size: 1rem; text-transform: uppercase;
             background: linear-gradient(145deg, #10b981, #059669); color: white;
             box-shadow: 0 5px 0 #047857, 0 8px 15px rgba(0,0,0,0.4); transition: 0.1s;
@@ -102,11 +100,15 @@
             background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
         }
 
+        /* Ottimizzata l'altezza minima e la visualizzazione fluida */
         #myBoard { 
-            width: 100%; 
-            border: 4px solid #0f001d; 
-            border-radius: 12px; 
-            margin: 10px 0;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 300px;
+            border: 3px solid #0f001d; 
+            border-radius: 8px; 
+            margin: 6px 0;
+            display: block;
         }
 
         .white-1e1d7 { background-color: var(--board-light) !important; }
@@ -116,15 +118,15 @@
 
         #status-bar {
             background: rgba(255,255,255,0.05);
-            padding: 8px 20px; border-radius: 50px;
-            font-size: 0.8rem; font-weight: 700; color: var(--yellow);
-            border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;
+            padding: 6px 15px; border-radius: 50px;
+            font-size: 0.85rem; font-weight: 700; color: var(--yellow);
+            border: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px;
         }
 
         .graveyard {
-            display: flex; gap: 3px; height: 35px; width: 100%;
-            background: rgba(0,0,0,0.2); border-radius: 8px; padding: 5px;
-            align-items: center; overflow: hidden; margin: 5px 0;
+            display: flex; gap: 3px; height: 32px; width: 100%;
+            background: rgba(0,0,0,0.2); border-radius: 8px; padding: 4px;
+            align-items: center; overflow: hidden; margin: 4px 0;
         }
 
         #result-screen {
@@ -151,7 +153,7 @@
         <h1>MASTER CHESS</h1>
         <div style="margin-bottom: 15px; opacity: 0.8;">Giocatore: <span id="lb-nick" style="color:var(--accent)">...</span></div>
         <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
-        <button onclick="initSingle()">GIOCATORE SINGOLO </button>
+        <button onclick="initSingle()">GIOCATORE SINGOLO</button>
         <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
     </div>
 
@@ -182,7 +184,6 @@
     var active = false;
     var peer = null;
 
-    // Recupera Nickname e Punti sincronizzati con la Hub
     let userNick = localStorage.getItem('tris_nick') || "Player"; 
     let score = parseInt(localStorage.getItem('chess_score')) || 0;
     
@@ -202,9 +203,14 @@
         }
         
         document.getElementById(id).classList.remove('hidden');
+
+        if(id === 'p-game' && board) {
+            board.resize();
+            setTimeout(() => { board.resize(); }, 50);
+            setTimeout(() => { board.resize(); }, 200);
+        }
     }
 
-    // Salva i punti sia localmente che su Cloud Firestore
     async function savePoints(newScore) {
         score = newScore;
         localStorage.setItem('chess_score', score);
@@ -214,7 +220,6 @@
         if (window.db && userNick !== "Player") {
             try {
                 const userRef = window.doc(window.db, "users", userNick);
-                // Usiamo merge:true per aggiornare solo MasterChess senza cancellare gli altri giochi
                 await window.setDoc(userRef, { 
                     MasterChess: score,
                     points_masterchess: score 
@@ -275,7 +280,6 @@
         nav('p-game');
         active = true;
         updateUI();
-        setTimeout(() => { board.resize(); }, 200);
     }
 
     function onDragStart(source, piece) {
@@ -324,7 +328,7 @@
             
             if (move.captured) {
                 const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${(move.color === 'w' ? 'b' : 'w') + move.captured.toUpperCase()}.png`;
-                $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:20px; opacity:0.7;">`);
+                $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:18px; opacity:0.7;">`);
             }
         }
 
