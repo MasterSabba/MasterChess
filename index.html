@@ -75,7 +75,6 @@
             transition: max-width 0.15s ease;
         }
 
-        /* MODALITÀ GIOCO GRANDE: Sfrutta il 95% del display per la massima leggibilità dei pezzi */
         .container.game-mode {
             width: 95vw !important;
             max-width: 550px !important;
@@ -149,7 +148,7 @@
     <div id="p-home">
         <h1>MASTER CHESS</h1>
         <div style="margin-bottom: 15px; opacity: 0.8;">Giocatore: <span id="lb-nick" style="color:var(--accent)">...</span></div>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Punti: <span id="pts">0</span></div>
+        <div style="margin-bottom: 15px; opacity: 0.8;">Punti Hub: <span id="pts" style="color:var(--success)">0</span></div>
         <button onclick="initSingle()">GIOCATORE SINGOLO </button>
         <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
     </div>
@@ -181,9 +180,11 @@
     var active = false;
     var peer = null;
 
-    // Recupero credenziali centralizzate dall'Hub
     let userNick = localStorage.getItem('nickname') || localStorage.getItem('username') || "Player"; 
+    
+    // Sincronizzazione con il formato chiave standard dell'Hub (points_masterchess)
     let score = parseInt(localStorage.getItem('points_masterchess')) || parseInt(localStorage.getItem('chess_score')) || 0;
+    localStorage.setItem('points_masterchess', score);
     
     document.getElementById('lb-nick').innerText = userNick;
     document.getElementById('pts').innerText = score;
@@ -202,7 +203,6 @@
         
         document.getElementById(id).classList.remove('hidden');
 
-        // Forza ricalcoli a catena per evitare il bug del caricamento asincrono della griglia
         if(id === 'p-game' && board) {
             board.resize();
             setTimeout(() => { board.resize(); }, 30);
@@ -211,7 +211,6 @@
         }
     }
 
-    // Salvataggio punti centralizzato e compatibile con merge di Firestore
     async function savePoints(newScore) {
         score = newScore;
         localStorage.setItem('points_masterchess', score);
