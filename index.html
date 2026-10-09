@@ -347,22 +347,28 @@
             const txt = document.getElementById('res-txt');
             res.classList.remove('hidden');
 
-            if (game.in_checkmate()) {
-                let win = (game.turn() !== myColor);
-                if (win) {
-                    txt.innerText = "👑 VITTORIA";
-                    txt.className = "res-win";
-                    savePoints(score + 10);
-                } else {
-                    txt.innerText = "SCONFITTA";
-                    txt.className = "res-lose";
-                    savePoints(Math.max(0, score - 5));
-                }
+         if (game.in_checkmate()) {
+    let win = (game.turn() !== myColor);
+    if (win) {
+        txt.innerText = "👑 VITTORIA";
+        txt.className = "res-win";
+        savePoints(score + 10);
+        
+        // AGGIUNGI QUESTA RIGA:
+        inviaVittoriaAlHub(50);
+    } else {
+        txt.innerText = "SCONFITTA";
+        txt.className = "res-lose";
+        savePoints(Math.max(0, score - 5));
+    }
+
             } else {
                 txt.innerText = "PATTA";
                 txt.className = "";
             }
         }
+
+
     }
 
     function initSingle() {
@@ -385,6 +391,15 @@
     });
 
     $(window).resize(board.resize);
+    function inviaVittoriaAlHub(puntiBonus = 50) {
+  const target = window.opener || (window.parent !== window ? window.parent : null);
+  if (target) {
+    target.postMessage({
+      gameKey: 'master-chess',
+      points: puntiBonus
+    }, '*');
+  }
+}
 </script>
 </body>
 </html>
