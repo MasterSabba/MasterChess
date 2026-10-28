@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MasterChess</title>
+    <title>MasterChess - Cyber Edition</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
@@ -27,20 +26,25 @@
             appId: "1:565..."
         };
 
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.firestore();
     </script>
     
     <style>
         :root {
-            --bg-deep: #0a0f1e;
-            --bg-slate: #1e293b;
-            --accent: #10b981;
+            --bg-deep: #090d16;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent-cyan: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-purple: #8b5cf6;
             --text-light: #f8fafc;
-            --text-dim: #64748b;
-            --board-light: #f1f5f9;
-            --board-dark: #64748b;
-            --yellow: #ffeb3b;
+            --text-dim: #94a3b8;
+            --board-light: #cbd5e1;
+            --board-dark: #334155;
+            --yellow: #facc15;
+            --danger: #ef4444;
         }
 
         * {
@@ -50,9 +54,9 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             margin: 0;
-            background: var(--bg-deep);
+            background: radial-gradient(circle at center, #1e1b4b 0%, #090d16 100%);
             color: var(--text-light);
             display: flex;
             align-items: center;
@@ -63,85 +67,135 @@
         }
 
         .container {
-            background: var(--bg-slate);
-            padding: 25px;
-            border-radius: 25px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 24px;
+            border-radius: 24px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), inset 0 0 2px rgba(255,255,255,0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
             width: 90%;
-            max-width: 360px;
+            max-width: 380px;
             position: relative;
-            transition: max-width 0.15s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .container.game-mode {
             width: 95vw !important;
-            max-width: 550px !important;
-            padding: 12px;
+            max-width: 520px !important;
+            padding: 14px;
         }
 
-        h1 { font-weight: 800; font-size: 2.2rem; margin: 0 0 10px 0; letter-spacing: -1px; color: var(--yellow); }
+        h1 { 
+            font-weight: 800; 
+            font-size: 2.2rem; 
+            margin: 0 0 6px 0; 
+            letter-spacing: -0.5px; 
+            background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+        
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
         .hidden { display: none !important; }
 
         button {
-            width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 15px;
-            font-weight: bold; cursor: pointer; font-size: 1rem; text-transform: uppercase;
-            background: linear-gradient(145deg, #10b981, #059669); color: white;
-            box-shadow: 0 5px 0 #047857, 0 8px 15px rgba(0,0,0,0.4); transition: 0.1s;
+            width: 100%; padding: 14px; margin: 8px 0; border: none; border-radius: 14px;
+            font-weight: 700; cursor: pointer; font-size: 0.95rem; text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4); 
+            transition: all 0.2s ease;
         }
-        button:active { transform: translateY(4px); box-shadow: 0 1px 0 #047857; }
-        .btn-sec { background: linear-gradient(145deg, #334155, #1e293b); color: var(--text-light); box-shadow: 0 5px 0 #0f172a; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6); }
+        button:active { transform: translateY(1px); }
+
+        .btn-sec { 
+            background: linear-gradient(135deg, #334155, #1e293b); 
+            color: var(--text-light); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .btn-sec:hover { box-shadow: 0 6px 15px rgba(0,0,0,0.5); }
 
         input {
-            width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; border: 1px solid #334155;
-            background: #0a0f1e; color: white; text-align: center; font-weight: 600; font-size: 1rem;
+            width: 100%; padding: 12px; margin: 10px 0; border-radius: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(15, 23, 42, 0.8); color: white; text-align: center; 
+            font-weight: 600; font-size: 1rem; outline: none;
         }
+        input:focus { border-color: var(--accent-cyan); }
 
         #myBoard { 
             width: 100% !important;
             max-width: 100% !important;
-            border: 4px solid #0f001d; 
-            border-radius: 10px; 
-            margin: 6px 0;
-            display: block;
+            border: 3px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 14px; 
+            margin: 8px 0;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
         .white-1e1d7 { background-color: var(--board-light) !important; }
         .black-3c85d { background-color: var(--board-dark) !important; }
-        .highlight-move { box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.7); }
-        .highlight-hint { background: radial-gradient(circle, rgba(16, 185, 129, 0.6) 20%, transparent 25%) !important; }
+        .highlight-move { box-shadow: inset 0 0 0 3px var(--yellow) !important; }
+        .highlight-hint { background: radial-gradient(circle, rgba(56, 189, 248, 0.7) 22%, transparent 25%) !important; }
 
         #status-bar {
-            background: rgba(255,255,255,0.05);
-            padding: 6px 15px; border-radius: 50px;
-            font-size: 0.85rem; font-weight: 700; color: var(--yellow);
-            border: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 8px 16px; border-radius: 50px;
+            font-size: 0.85rem; font-weight: 700; color: var(--accent-cyan);
+            border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
         }
 
         .graveyard {
-            display: flex; gap: 3px; height: 32px; width: 100%;
-            background: rgba(0,0,0,0.2); border-radius: 8px; padding: 4px;
-            align-items: center; overflow: hidden; margin: 4px 0;
+            display: flex; gap: 4px; height: 34px; width: 100%;
+            background: rgba(15, 23, 42, 0.5); border-radius: 10px; padding: 4px 8px;
+            align-items: center; overflow-x: auto; margin: 4px 0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         #result-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 15, 30, 0.95); border-radius: 25px;
+            background: rgba(9, 13, 22, 0.95); border-radius: 24px;
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+            backdrop-filter: blur(10px);
         }
-        #res-txt { font-size: 2rem; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; }
-        .res-win { color: var(--accent); text-shadow: 0 0 20px var(--accent); }
-        .res-lose { color: #ff3131; text-shadow: 0 0 20px #ff3131; }
+        #res-txt { font-size: 2.2rem; font-weight: 800; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .res-win { color: var(--accent-emerald); text-shadow: 0 0 25px rgba(16, 185, 129, 0.6); }
+        .res-lose { color: var(--danger); text-shadow: 0 0 25px rgba(239, 68, 68, 0.6); }
 
-        #code-box { background: #000; color: var(--accent); padding: 15px; border-radius: 10px; font-family: monospace; border: 1px dashed var(--accent); margin: 10px 0; font-weight: bold; }
-
-            .exit-button {
-            position: absolute; top: 15px; left: 20px; font-size: 2rem; line-height: 1;
-            color: var(--empty-border); text-decoration: none; z-index: 100;
-            transition: all 0.2s ease; -webkit-tap-highlight-color: transparent; font-family: Arial, sans-serif;
+        #code-box { 
+            background: rgba(15, 23, 42, 0.9); color: var(--accent-cyan); 
+            padding: 15px; border-radius: 12px; font-family: monospace; 
+            border: 1px dashed var(--accent-cyan); margin: 10px 0; font-weight: bold; 
         }
-        .exit-button:hover { color: var(--text-color); transform: scale(1.1); }
+
+        .exit-button {
+            position: absolute; top: 15px; left: 20px; font-size: 1.8rem; line-height: 1;
+            color: var(--text-dim); text-decoration: none; z-index: 100;
+            transition: all 0.2s ease; font-family: Arial, sans-serif;
+        }
+        .exit-button:hover { color: var(--text-light); transform: scale(1.1); }
+        
+        .player-info-card {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -154,29 +208,41 @@
         <button onclick="location.reload()" style="width: 80%">MENU PRINCIPALE</button>
     </div>
 
+    <!-- HOME -->
     <div id="p-home">
         <h1>MASTER CHESS</h1>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Giocatore: <span id="lb-nick" style="color:var(--accent)">...</span></div>
-        <div style="margin-bottom: 15px; opacity: 0.8;">Punti Hub: <span id="pts" style="color:var(--success)">0</span></div>
-        <button onclick="initSingle()">GIOCATORE SINGOLO </button>
-        <button onclick="nav('p-friends')">MULTIPLAYER ONLINE</button>
+        <div class="subtitle">CYBER EDITION</div>
+        
+        <div class="player-info-card">
+            <div>Giocatore: <span id="lb-nick" style="color:var(--accent-cyan); font-weight:bold;">...</span></div>
+            <div>Punti: <span id="pts" style="color:var(--accent-emerald); font-weight:bold;">0</span></div>
+        </div>
+
+        <button onclick="initSingle()">GIOCATORE SINGOLO</button>
+        <button onclick="nav('p-friends')" class="btn-sec">MULTIPLAYER ONLINE</button>
     </div>
 
+    <!-- FRIENDS ONLINE -->
     <div id="p-friends" class="hidden">
         <h1>ONLINE P2P</h1>
+        <div class="subtitle">Sfida i tuoi amici inserendo il codice</div>
         <button onclick="createRoom()">CREA PARTITA (ID)</button>
         <div id="code-box" class="hidden">...</div>
         <input type="text" id="remote-id" placeholder="Incolla Codice Amico" maxlength="5">
-        <button onclick="connectToPeer()">ENTRA IN PARTITA</button>
-        <button class="btn-sec" onclick="nav('p-home')">INDIETRO</button>
+        <button onclick="connectToPeer()" class="btn-sec">ENTRA IN PARTITA</button>
+        <button class="btn-sec" onclick="nav('p-home')" style="margin-top: 15px; opacity: 0.7;">INDIETRO</button>
     </div>
 
+    <!-- GAME BOARD -->
     <div id="p-game" class="hidden">
-        <div id="status-bar">Inizializzazione...</div>
+        <div id="status-bar">
+            <span id="game-status-text">TURNO: BIANCO</span>
+            <span id="turn-indicator" style="font-size: 0.75rem; background: var(--accent-purple); padding: 2px 8px; border-radius: 10px; color: #fff;">SOLO</span>
+        </div>
         <div id="top-captured" class="graveyard"></div>
         <div id="myBoard"></div>
         <div id="bottom-captured" class="graveyard"></div>
-        <button class="btn-sec" onclick="location.reload()">ABBANDONA</button>
+        <button class="btn-sec" onclick="location.reload()" style="margin-top: 10px;">ABBANDONA</button>
     </div>
 </div>
 
@@ -190,8 +256,6 @@
     var peer = null;
 
     let userNick = localStorage.getItem('nickname') || localStorage.getItem('username') || "Player"; 
-    
-    // Sincronizzazione con il formato chiave standard dell'Hub (points_masterchess)
     let score = parseInt(localStorage.getItem('points_masterchess')) || parseInt(localStorage.getItem('chess_score')) || 0;
     localStorage.setItem('points_masterchess', score);
     
@@ -214,9 +278,8 @@
 
         if(id === 'p-game' && board) {
             board.resize();
-            setTimeout(() => { board.resize(); }, 30);
-            setTimeout(() => { board.resize(); }, 100);
-            setTimeout(() => { board.resize(); }, 250);
+            setTimeout(() => { board.resize(); }, 50);
+            setTimeout(() => { board.resize(); }, 150);
         }
     }
 
@@ -230,7 +293,6 @@
             await db.collection("users").doc(userNick).set({
                 MasterChess: score
             }, { merge: true });
-            console.log("Punti MasterChess sincronizzati su Firestore per: " + userNick);
         } catch (e) {
             console.error("Errore di scrittura database: ", e);
         }
@@ -272,6 +334,7 @@
     }
 
     function setupMP() {
+        document.getElementById('turn-indicator').innerText = "ONLINE P2P";
         conn.on('data', data => {
             let move = game.move({ from: data.from, to: data.to, promotion: data.promotion });
             if (move) {
@@ -306,20 +369,66 @@
             conn.send({ from: move.from, to: move.to, promotion: move.promotion });
         }
         updateUI(move);
-        if (!isMP && !game.game_over()) setTimeout(makeBestAIByCapture, 600);
+        if (!isMP && !game.game_over()) setTimeout(makeSmartAIMove, 500);
     }
 
-    function makeBestAIByCapture() {
+    // NUOVO ENGINE AI AVANZATO CON VALUTAZIONE E CASUALITÀ
+    const pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+
+    function evaluateBoard(boardState) {
+        let totalScore = 0;
+        boardState.forEach(row => {
+            row.forEach(piece => {
+                if (piece) {
+                    let val = pieceValues[piece.type] || 0;
+                    totalScore += piece.color === 'w' ? -val : val;
+                }
+            });
+        });
+        return totalScore;
+    }
+
+    function makeSmartAIMove() {
         let moves = game.moves({ verbose: true });
         if (moves.length === 0) return;
 
-        moves.sort((a, b) => {
-            let aCap = a.captured ? 1 : 0;
-            let bCap = b.captured ? 1 : 0;
-            return bCap - aCap;
-        });
+        let bestScore = -Infinity;
+        let bestMoves = [];
 
-        let aiMove = game.move({ from: moves[0].from, to: moves[0].to, promotion: 'q' });
+        for (let i = 0; i < moves.length; i++) {
+            let move = moves[i];
+            game.move(move);
+
+            // Valuta il punteggio della posizione derivante dalla mossa
+            let score = evaluateBoard(game.board());
+            
+            // Bonus per la cattura di pezzi
+            if (move.captured) {
+                score += (pieceValues[move.captured] || 10) * 1.5;
+            }
+            // Bonus per la promozione
+            if (move.promotion) {
+                score += 80;
+            }
+            // Bonus per dare scacco
+            if (game.in_check()) {
+                score += 15;
+            }
+
+            game.undo();
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestMoves = [move];
+            } else if (score === bestScore) {
+                bestMoves.push(move);
+            }
+        }
+
+        // Selezione casuale tra le migliori mosse equivalenti (evita la ripetitività)
+        let chosenMove = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        let aiMove = game.move({ from: chosenMove.from, to: chosenMove.to, promotion: 'q' });
+        
         board.position(game.fen());
         updateUI(aiMove);
     }
@@ -333,13 +442,13 @@
             
             if (move.captured) {
                 const img = `https://chessboardjs.com/img/chesspieces/wikipedia/${(move.color === 'w' ? 'b' : 'w') + move.captured.toUpperCase()}.png`;
-                $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:18px; opacity:0.7;">`);
+                $(`#${move.color === myColor ? 'bottom-captured' : 'top-captured'}`).append(`<img src="${img}" style="width:20px; opacity:0.8;">`);
             }
         }
 
         let status = game.turn() === 'w' ? "TURNO: BIANCO" : "TURNO: NERO";
         if (game.in_check()) status = "⚠️ SCACCO!";
-        document.getElementById('status-bar').innerText = status;
+        document.getElementById('game-status-text').innerText = status;
 
         if (game.game_over()) {
             active = false;
@@ -347,32 +456,28 @@
             const txt = document.getElementById('res-txt');
             res.classList.remove('hidden');
 
-         if (game.in_checkmate()) {
-    let win = (game.turn() !== myColor);
-    if (win) {
-        txt.innerText = "👑 VITTORIA";
-        txt.className = "res-win";
-        savePoints(score + 300);
-        
-        // AGGIUNGI QUESTA RIGA:
-        inviaVittoriaAlHub(50);
-    } else {
-        txt.innerText = "SCONFITTA";
-        txt.className = "res-lose";
-        savePoints(Math.max(0, score - 5));
-    }
-
+            if (game.in_checkmate()) {
+                let win = (game.turn() !== myColor);
+                if (win) {
+                    txt.innerText = "👑 VITTORIA";
+                    txt.className = "res-win";
+                    savePoints(score + 300);
+                    inviaVittoriaAlHub(50);
+                } else {
+                    txt.innerText = "SCONFITTA";
+                    txt.className = "res-lose";
+                    savePoints(Math.max(0, score - 5));
+                }
             } else {
                 txt.innerText = "PATTA";
                 txt.className = "";
             }
         }
-
-
     }
 
     function initSingle() {
         isMP = false; 
+        document.getElementById('turn-indicator').innerText = "VS AI";
         game.reset();
         board.orientation('white');
         board.start();
@@ -391,15 +496,16 @@
     });
 
     $(window).resize(board.resize);
+    
     function inviaVittoriaAlHub(puntiBonus = 50) {
-  const target = window.opener || (window.parent !== window ? window.parent : null);
-  if (target) {
-    target.postMessage({
-      gameKey: 'master-chess',
-      points: puntiBonus
-    }, '*');
-  }
-}
+        const target = window.opener || (window.parent !== window ? window.parent : null);
+        if (target) {
+            target.postMessage({
+                gameKey: 'master-chess',
+                points: puntiBonus
+            }, '*');
+        }
+    }
 </script>
 </body>
 </html>
